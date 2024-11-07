@@ -159,6 +159,7 @@
             padding: 15px;
             border-radius: 8px;
             border: 1px solid var(--border);
+            position: relative;
         }
 
         .record-card h3 {
@@ -168,6 +169,17 @@
 
         .record-card p {
             margin-bottom: 5px;
+        }
+
+        .delete-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--danger);
+            font-size: 1.5em;
         }
 
         #toast {
@@ -330,7 +342,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } 
+        import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot } 
         from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
 
         // Firebase Configuration
@@ -478,6 +490,7 @@
                         <p><strong>Last Visit:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
                         <p><strong>Agent:</strong> ${report.agentName}</p>
                         <p><strong>Feedback:</strong> ${report.clientFeedback}</p>
+                        <button class="delete-button" data-id="${report.id}"><i class="fas fa-trash"></i></button>
                     `;
                 } else {
                     card.innerHTML = `
@@ -490,8 +503,20 @@
                         <p><strong>Visit Date:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
                         <p><strong>Agent:</strong> ${report.agentName}</p>
                         <p><strong>Feedback:</strong> ${report.clientFeedback}</p>
+                        <button class="delete-button" data-id="${report.id}"><i class="fas fa-trash"></i></button>
                     `;
                 }
+                
+                card.querySelector('.delete-button').addEventListener('click', async (e) => {
+                    const reportId = e.target.closest('button').dataset.id;
+                    try {
+                        await deleteDoc(doc(db, "reports", reportId));
+                        showToast("Record deleted successfully!");
+                    } catch (error) {
+                        console.error("Error deleting record:", error);
+                        showToast("Error deleting record", "error");
+                    }
+                });
                 
                 grid.appendChild(card);
             });
@@ -545,3 +570,4 @@
     </script>
 </body>
 </html>
+
