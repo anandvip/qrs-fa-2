@@ -342,6 +342,24 @@
         // Global State
         let currentView = 'form';
         let reports = [];
+        
+ window.switchView = (view) => {
+        currentView = view;
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        const formView = document.getElementById('formView');
+        const recordsView = document.getElementById('recordsView');
+
+        if (view === 'form') {
+            formView.style.display = 'block';
+            recordsView.style.display = 'none';
+        } else {
+            formView.style.display = 'none';
+            recordsView.style.display = 'block';
+            renderRecords(view);
+        }
+    };
 
         // Form Submission
         document.getElementById('reportForm').addEventListener('submit', async (e) => {
