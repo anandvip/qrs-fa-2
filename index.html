@@ -56,7 +56,7 @@
         .tab {
             padding: 10px 20px;
             background: var(--card-bg);
-            border: none;
+            border: 1px solid var(--primary);
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
@@ -65,6 +65,11 @@
         .tab.active {
             background: var(--primary);
             color: white;
+        }
+
+        .tab:hover {
+            background: #e0e7ff;
+            border-color: #1e40af;
         }
 
         .form-container {
@@ -121,10 +126,14 @@
             cursor: pointer;
             font-size: 14px;
             width: 100%;
+            border: 1px solid var(--primary);
+            transition: all 0.2s;
         }
 
         button:hover {
-            opacity: 0.9;
+            background: #1e40af;
+            border-color: #1e3a8a;
+            opacity: 0.95;
         }
 
         .records-view {
@@ -220,12 +229,13 @@
         </header>
 
         <div class="tabs">
-            <button class="tab active" data-view="form">New Report</button>
+            <button class="tab active" data-view="form">New Patient Report</button>
+            <button class="tab" data-view="doctorForm">New Doctor Visit Report</button>
             <button class="tab" data-view="patients">Patient Records</button>
             <button class="tab" data-view="doctors">Doctor Records</button>
         </div>
 
-        <!-- Form View -->
+        <!-- Patient Report Form View -->
         <div id="formView" class="form-container">
             <form id="reportForm">
                 <div class="form-section">
@@ -284,25 +294,67 @@
                 </div>
 
                 <div class="form-section">
-                    <h3>Doctor Information (Optional)</h3>
+                    <h3>Visit Notes</h3>
                     <div class="form-group">
-                        <label>Doctor Name</label>
-                        <input type="text" id="doctorName">
+                        <label>Feedback/Comments*</label>
+                        <textarea id="clientFeedback" required></textarea>
+                    </div>
+                </div>
+
+                <button type="submit">Submit Patient Report</button>
+            </form>
+        </div>
+
+        <!-- Doctor Visit Report Form View -->
+        <div id="doctorFormView" class="form-container" style="display: none;">
+            <form id="doctorReportForm">
+                <div class="form-section">
+                    <h3>Agent Information</h3>
+                    <div class="form-group">
+                        <label>Agent Name*</label>
+                        <select id="doctorAgentName" required>
+                            <option value="">Select Agent</option>
+                            <option value="Jyoti Arora">Jyoti Arora</option>
+                            <option value="Gita Sharma">Gita Sharma</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
-                        <label>Hospital/Clinic</label>
-                        <input type="text" id="hospitalName">
+                        <label>City*</label>
+                        <select id="doctorCityName" required>
+                            <option value="">Select City</option>
+                            <option value="Kurukshetra">Kurukshetra</option>
+                            <option value="Karnal">Karnal</option>
+                            <option value="Ladwa">Ladwa</option>
+                            <option value="Kaithal">Kaithal</option>
+                            <option value="Pehowa">Pehowa</option>
+                            <option value="Yamunanagar">Yamunanagar</option>
+                            <option value="Panipat">Panipat</option>
+                            <option value="Sonipat">Sonipat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Doctor Information</h3>
+                    <div class="form-group">
+                        <label>Doctor Name*</label>
+                        <input type="text" id="doctorName" required>
                     </div>
 
                     <div class="form-group">
-                        <label>Doctor Mobile</label>
-                        <input type="tel" id="doctorPhone" pattern="[0-9]{10}" placeholder="10-digit mobile number">
+                        <label>Hospital/Clinic*</label>
+                        <input type="text" id="hospitalName" required>
                     </div>
 
                     <div class="form-group">
-                        <label>Interest Level</label>
-                        <select id="doctorInterest">
+                        <label>Doctor Mobile*</label>
+                        <input type="tel" id="doctorPhone" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Interest Level*</label>
+                        <select id="doctorInterest" required>
                             <option value="">Select Level</option>
                             <option value="Very Interested">Very Interested</option>
                             <option value="Somewhat Interested">Somewhat Interested</option>
@@ -316,11 +368,11 @@
                     <h3>Visit Notes</h3>
                     <div class="form-group">
                         <label>Feedback/Comments*</label>
-                        <textarea id="clientFeedback" required></textarea>
+                        <textarea id="doctorFeedback" required></textarea>
                     </div>
                 </div>
 
-                <button type="submit">Submit Report</button>
+                <button type="submit">Submit Doctor Visit Report</button>
             </form>
         </div>
 
@@ -381,13 +433,20 @@
 
             // Update views
             const formView = document.getElementById('formView');
+            const doctorFormView = document.getElementById('doctorFormView');
             const recordsView = document.getElementById('recordsView');
 
             if (view === 'form') {
                 formView.style.display = 'block';
+                doctorFormView.style.display = 'none';
+                recordsView.style.display = 'none';
+            } else if (view === 'doctorForm') {
+                formView.style.display = 'none';
+                doctorFormView.style.display = 'block';
                 recordsView.style.display = 'none';
             } else {
                 formView.style.display = 'none';
+                doctorFormView.style.display = 'none';
                 recordsView.style.display = 'block';
                 renderRecords(view);
             }
@@ -412,22 +471,40 @@
                 clientFeedback: document.getElementById('clientFeedback').value,
             };
 
-            // Add optional doctor fields if provided
-            const doctorName = document.getElementById('doctorName').value;
-            if (doctorName) {
-                reportData.doctorName = doctorName;
-                reportData.hospitalName = document.getElementById('hospitalName').value;
-                reportData.doctorPhone = document.getElementById('doctorPhone').value;
-                reportData.doctorInterest = document.getElementById('doctorInterest').value;
-            }
-
             try {
                 await addDoc(collection(db, "reports"), reportData);
-                showToast("Report submitted successfully!");
+                showToast("Patient report submitted successfully!");
                 e.target.reset();
             } catch (error) {
-                console.error("Error submitting report:", error);
-                showToast("Error submitting report", "error");
+                console.error("Error submitting patient report:", error);
+                showToast("Error submitting patient report", "error");
+            }
+        });
+
+        document.getElementById('doctorReportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const doctorReportData = {
+                // Required Fields
+                timestamp: new Date(),
+                agentName: document.getElementById('doctorAgentName').value,
+                cityName: document.getElementById('doctorCityName').value,
+                
+                // Doctor Info (required)
+                doctorName: document.getElementById('doctorName').value,
+                hospitalName: document.getElementById('hospitalName').value,
+                doctorPhone: document.getElementById('doctorPhone').value,
+                doctorInterest: document.getElementById('doctorInterest').value,
+                doctorFeedback: document.getElementById('doctorFeedback').value,
+            };
+
+            try {
+                await addDoc(collection(db, "doctorReports"), doctorReportData);
+                showToast("Doctor visit report submitted successfully!");
+                e.target.reset();
+            } catch (error) {
+                console.error("Error submitting doctor visit report:", error);
+                showToast("Error submitting doctor visit report", "error");
             }
         });
 
@@ -489,7 +566,7 @@
                         <p><strong>Interest Level:</strong> ${report.doctorInterest || 'N/A'}</p>
                         <p><strong>Last Visit:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
                         <p><strong>Agent:</strong> ${report.agentName}</p>
-                        <p><strong>Feedback:</strong> ${report.clientFeedback}</p>
+                        <p><strong>Feedback:</strong> ${report.doctorFeedback}</p>
                         <button class="delete-button" data-id="${report.id}"><i class="fas fa-trash"></i></button>
                     `;
                 } else {
@@ -538,21 +615,21 @@
         const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (currentView !== 'form') {
+            if (currentView !== 'form' && currentView !== 'doctorForm') {
                 renderRecords(currentView);
             }
         });
 
         // Search Handler
         document.getElementById('searchInput').addEventListener('input', () => {
-            if (currentView !== 'form') {
+            if (currentView !== 'form' && currentView !== 'doctorForm') {
                 renderRecords(currentView);
             }
         });
 
         // Sort Handler
         document.getElementById('sortBy').addEventListener('change', () => {
-            if (currentView !== 'form') {
+            if (currentView !== 'form' && currentView !== 'doctorForm') {
                 renderRecords(currentView);
             }
         });
@@ -570,4 +647,3 @@
     </script>
 </body>
 </html>
-
