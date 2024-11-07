@@ -126,11 +126,12 @@
             opacity: 0.9;
         }
 
-        .record-view {
+        .records-view {
             background: var(--card-bg);
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px var(--shadow);
+            display: none;
         }
 
         .controls {
@@ -201,9 +202,9 @@
         </header>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchView('form')">New Report</button>
-            <button class="tab" onclick="switchView('patients')">Patient Records</button>
-            <button class="tab" onclick="switchView('doctors')">Doctor Records</button>
+            <button class="tab active" data-view="form">New Report</button>
+            <button class="tab" data-view="patients">Patient Records</button>
+            <button class="tab" data-view="doctors">Doctor Records</button>
         </div>
 
         <!-- Form View -->
@@ -305,7 +306,7 @@
         </div>
 
         <!-- Records View -->
-        <div id="recordsView" class="record-view" style="display: none;">
+        <div id="recordsView" class="records-view">
             <div class="controls">
                 <input type="text" class="search-input" id="searchInput" placeholder="Search records...">
                 <select id="sortBy" class="search-input">
@@ -319,213 +320,212 @@
     </div>
 
     <div id="toast"></div>
+  <script>
+  // Firebase Configuration and Initialization
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } 
+from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } 
-        from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
+const firebaseConfig = {
+    apiKey: "AIzaSyCpcUWB7q_Dr6zONnrrHZ4Oek6CKqynwxM",
+    authDomain: "field-agent-85e4d.firebaseapp.com",
+    projectId: "field-agent-85e4d",
+    storageBucket: "field-agent-85e4d.appspot.com",
+    messagingSenderId: "943481749888",
+    appId: "1:943481749888:web:2d6d1d2a2a449cc6450165"
+};
 
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCpcUWB7q_Dr6zONnrrHZ4Oek6CKqynwxM",
-            authDomain: "field-agent-85e4d.firebaseapp.com",
-            projectId: "field-agent-85e4d",
-            storageBucket: "field-agent-85e4d.appspot.com",
-            messagingSenderId: "943481749888",
-            appId: "1:943481749888:web:2d6d1d2a2a449cc6450165"
-        };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+// Global State
+let currentView = 'form';
+let reports = [];
 
-        // Global State
-        let currentView = 'form';
-        let reports = [];
-        
- window.switchView = (view) => {
-        currentView = view;
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+// View Management
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        const view = tab.dataset.view;
+        switchView(view);
+    });
+});
 
-        const formView = document.getElementById('formView');
-        const recordsView = document.getElementById('recordsView');
+function switchView(view) {
+    currentView = view;
+    
+    // Update tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.view === view);
+    });
 
-        if (view === 'form') {
-            formView.style.display = 'block';
-            recordsView.style.display = 'none';
-        } else {
-            formView.style.display = 'none';
-            recordsView.style.display = 'block';
-            renderRecords(view);
-        }
+    // Update views
+    const formView = document.getElementById('formView');
+    const recordsView = document.getElementById('recordsView');
+
+    if (view === 'form') {
+        formView.style.display = 'block';
+        recordsView.style.display = 'none';
+    } else {
+        formView.style.display = 'none';
+        recordsView.style.display = 'block';
+        renderRecords(view);
+    }
+}
+
+// Form Submission
+document.getElementById('reportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const report = {
+        // Required Fields
+        timestamp: new Date(),
+        agentName: document.getElementById('agentName').value,
+        cityName: document.getElementById('cityName').value,
+        patientName: document.getElementById('patientName').value,
+        disease: document.getElementById('disease').value,
+        locationArea: document.getElementById('locationArea').value,
+        patientAddress: document.getElementById('patientAddress').value,
+        clientFeedback: document.getElementById('clientFeedback').value,
     };
 
-        // Form Submission
-        document.getElementById('reportForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const report = {
-                // Required Fields
-                timestamp: new Date(),
-                agentName: document.getElementById('agentName').value,
-                cityName: document.getElementById('cityName').value,
-                patientName: document.getElementById('patientName').value,
-                disease: document.getElementById('disease').value,
-                locationArea: document.getElementById('locationArea').value,
-                patientAddress: document.getElementById('patientAddress').value,
-                clientFeedback: document.getElementById('clientFeedback').value,
-                
-                // Optional Doctor Fields
-                ...(document.getElementById('doctorName').value && {
-                    doctorName: document.getElementById('doctorName').value,
-                    hospitalName: document.getElementById('hospitalName').value,
-                    doctorPhone: document.getElementById('doctorPhone').value,
-                    doctorInterest: document.getElementById('doctorInterest').value
-                })
-            };
+    // Add optional doctor fields if provided
+    const doctorName = document.getElementById('doctorName').value;
+    if (doctorName) {
+        report.doctorName = doctorName;
+        report.hospitalName = document.getElementById('hospitalName').value;
+        report.doctorPhone = document.getElementById('doctorPhone').value;
+        report.doctorInterest = document.getElementById('doctorInterest').value;
+    }
 
-            try {
-                await addDoc(collection(db, "reports"), report);
-                showToast("Report submitted successfully!");
-                e.target.reset();
-            } catch (error) {
-                console.error("Error submitting report:", error);
-                showToast("Error submitting report", "error");
-            }
-        });
+    try {
+        await addDoc(collection(db, "reports"), report);
+        showToast("Report submitted successfully!");
+        e.target.reset();
+    } catch (error) {
+        console.error("Error submitting report:", error);
+        showToast("Error submitting report", "error");
+    }
+});
 
-        // View Switching
-        window.switchView = function(view) {
-            currentView = view;
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+// Record Rendering
+function renderRecords(view) {
+    const grid = document.getElementById('recordsGrid');
+    grid.innerHTML = '';
 
-            const formView = document.getElementById('formView');
-            const recordsView = document.getElementById('recordsView');
+    let filteredReports = reports;
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
-            if (view === 'form') {
-                formView.style.display = 'block';
-                recordsView.style.display = 'none';
-            } else {
-                formView.style.display = 'none';
-                recordsView.style.display = 'block';
-                renderRecords(view);
-            }
-        };
+    // Filter based on view and search
+    if (view === 'doctors') {
+        filteredReports = reports.filter(r => r.doctorName);
+    }
 
-        // Record Rendering
-        function renderRecords(view) {
-            const grid = document.getElementById('recordsGrid');
-            grid.innerHTML = '';
-
-            let filteredReports = reports;
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
-            // Filter based on view and search
+    if (searchTerm) {
+        filteredReports = filteredReports.filter(report => {
             if (view === 'doctors') {
-                filteredReports = reports.filter(r => r.doctorName);
+                return report.doctorName?.toLowerCase().includes(searchTerm) ||
+                       report.hospitalName?.toLowerCase().includes(searchTerm);
+            } else {
+                return report.patientName.toLowerCase().includes(searchTerm) ||
+                       report.disease.toLowerCase().includes(searchTerm) ||
+                       report.locationArea.toLowerCase().includes(searchTerm);
             }
+        });
+    }
 
-            if (searchTerm) {
-                filteredReports = filteredReports.filter(report => {
-                    if (view === 'doctors') {
-                        return report.doctorName?.toLowerCase().includes(searchTerm) ||
-                               report.hospitalName?.toLowerCase().includes(searchTerm);
-                    } else {
-                        return report.patientName.toLowerCase().includes(searchTerm) ||
-                               report.disease.toLowerCase().includes(searchTerm) ||
-                               report.locationArea.toLowerCase().includes(searchTerm);
-                    }
-                });
-            }
-
-            // Sort records
-            const sortBy = document.getElementById('sortBy').value;
-            filteredReports.sort((a, b) => {
-                switch(sortBy) {
-                    case 'date':
-                        return b.timestamp - a.timestamp;
-                    case 'name':
-                        return view === 'doctors' 
-                            ? (a.doctorName || '').localeCompare(b.doctorName || '')
-                            : a.patientName.localeCompare(b.patientName);
-                    case 'city':
-                        return a.cityName.localeCompare(b.cityName);
-                    default:
-                        return 0;
-                }
-            });
-
-            // Render records
-            filteredReports.forEach(report => {
-                const card = document.createElement('div');
-                card.className = 'record-card';
-                
-                if (view === 'doctors' && report.doctorName) {
-                    card.innerHTML = `
-                        <h3>${report.doctcard.innerHTML = `
-                        <h3>${report.doctorName}</h3>
-                        <p><strong>Hospital:</strong> ${report.hospitalName || 'N/A'}</p>
-                        <p><strong>Phone:</strong> ${report.doctorPhone || 'N/A'}</p>
-                        <p><strong>City:</strong> ${report.cityName}</p>
-                        <p><strong>Interest Level:</strong> ${report.doctorInterest || 'N/A'}</p>
-                        <p><strong>Last Visit:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
-                    `;
-                } else {
-                    card.innerHTML = `
-                        <h3>${report.patientName}</h3>
-                        <p><strong>Condition:</strong> ${report.disease}</p>
-                        <p><strong>Area:</strong> ${report.locationArea}</p>
-                        <p><strong>Address:</strong> ${report.patientAddress}</p>
-                        <p><strong>Doctor:</strong> ${report.doctorName || 'Not Assigned'}</p>
-                        <p><strong>Visit Date:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
-                    `;
-                }
-                
-                grid.appendChild(card);
-            });
+    // Sort records
+    const sortBy = document.getElementById('sortBy').value;
+    filteredReports.sort((a, b) => {
+        switch(sortBy) {
+            case 'date':
+                return b.timestamp - a.timestamp;
+            case 'name':
+                return view === 'doctors' 
+                    ? (a.doctorName || '').localeCompare(b.doctorName || '')
+                    : a.patientName.localeCompare(b.patientName);
+            case 'city':
+                return  a.cityName.localeCompare(b.cityName);
+            default:
+                return 0;
         }
+    });
 
-        // Toast Notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
-            toast.style.display = 'block';
-            
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
+    // Render records
+    filteredReports.forEach(report => {
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        
+        if (view === 'doctors' && report.doctorName) {
+            card.innerHTML = `
+                <h3>${report.doctorName}</h3>
+                <p><strong>Hospital:</strong> ${report.hospitalName || 'N/A'}</p>
+                <p><strong>Phone:</strong> ${report.doctorPhone || 'N/A'}</p>
+                <p><strong>City:</strong> ${report.cityName}</p>
+                <p><strong>Interest Level:</strong> ${report.doctorInterest || 'N/A'}</p>
+                <p><strong>Last Visit:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
+                <p><strong>Agent:</strong> ${report.agentName}</p>
+            `;
+        } else {
+            card.innerHTML = `
+                <h3>${report.patientName}</h3>
+                <p><strong>Condition:</strong> ${report.disease}</p>
+                <p><strong>Area:</strong> ${report.locationArea}</p>
+                <p><strong>Address:</strong> ${report.patientAddress}</p>
+                <p><strong>Doctor:</strong> ${report.doctorName || 'Not Assigned'}</p>
+                <p><strong>Visit Date:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
+                <p><strong>Agent:</strong> ${report.agentName}</p>
+            `;
         }
+        
+        grid.appendChild(card);
+    });
+}
 
-        // Real-time Updates
-        const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
-        onSnapshot(q, (snapshot) => {
-            reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (currentView !== 'form') {
-                renderRecords(currentView);
-            }
-        });
+// Toast Notification
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
+    toast.style.display = 'block';
+    
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+}
 
-        // Search Handler
-        document.getElementById('searchInput').addEventListener('input', () => {
-            if (currentView !== 'form') {
-                renderRecords(currentView);
-            }
-        });
+// Real-time Updates
+const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
+onSnapshot(q, (snapshot) => {
+    reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (currentView !== 'form') {
+        renderRecords(currentView);
+    }
+});
 
-        // Sort Handler
-        document.getElementById('sortBy').addEventListener('change', () => {
-            if (currentView !== 'form') {
-                renderRecords(currentView);
-            }
-        });
+// Search Handler
+document.getElementById('searchInput').addEventListener('input', () => {
+    if (currentView !== 'form') {
+        renderRecords(currentView);
+    }
+});
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            switchView('form');
-        });
-    </script>
+// Sort Handler
+document.getElementById('sortBy').addEventListener('change', () => {
+    if (currentView !== 'form') {
+        renderRecords(currentView);
+    }
+});
+
+// Error Handler
+window.addEventListener('unhandledrejection', event => {
+    console.error('Unhandled promise rejection:', event.reason);
+    showToast('An error occurred. Please try again.', 'error');
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    switchView('form');
+});
+  </script>
 </body>
 </html>
