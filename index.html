@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRS Field Agent Reporting System</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --danger: #dc2626;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            background: var(--background);
+            color: var(--text);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .form-container {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .form-section {
+            border: 1px solid var(--border);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .form-section h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .record-view {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .record-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .record-card h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: var(--success);
+            color: white;
+            border-radius: 4px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            .record-card {
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>QRS Field Agent Reporting System</h1>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchView('form')">New Report</button>
+            <button class="tab" onclick="switchView('patients')">Patient Records</button>
+            <button class="tab" onclick="switchView('doctors')">Doctor Records</button>
+        </div>
+
+        <!-- Form View -->
+        <div id="formView" class="form-container">
+            <form id="reportForm">
+                <!-- Basic Info -->
+                <div class="form-section">
+                    <h3>Agent Information</h3>
+                    <div class="form-group">
+                        <label>Agent Name*</label>
+                        <select id="agentName" required>
+                            <option value="">Select Agent</option>
+                            <option value="Jyoti Arora">Jyoti Arora</option>
+                            <option value="Gita Sharma">Gita Sharma</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>City*</label>
+                        <select id="cityName" required>
+                            <option value="">Select City</option>
+                            <option value="Kurukshetra">Kurukshetra</option>
+                            <option value="Karnal">Karnal</option>
+                            <option value="Ladwa">Ladwa</option>
+                            <option value="Kaithal">Kaithal</option>
+                            <option value="Pehowa">Pehowa</option>
+                            <option value="Yamunanagar">Yamunanagar</option>
+                            <option value="Panipat">Panipat</option>
+                            <option value="Sonipat">Sonipat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Patient Info -->
+                <div class="form-section">
+                    <h3>Patient Information</h3>
+                    <div class="form-group">
+                        <label>Patient Name*</label>
+                        <input type="text" id="patientName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Disease/Condition*</label>
+                        <input type="text" id="disease" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Area*</label>
+                        <input type="text" id="locationArea" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Full Address*</label>
+                        <textarea id="patientAddress" required></textarea>
+                    </div>
+                </div>
+
+                <!-- Doctor Info (Optional) -->
+                <div class="form-section">
+                    <h3>Doctor Information (Optional)</h3>
+                    <div class="form-group">
+                        <label>Doctor Name</label>
+                        <input type="text" id="doctorName">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Hospital/Clinic</label>
+                        <input type="text" id="hospitalName">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="tel" id="doctorPhone" pattern="[0-9]{10}" placeholder="10-digit number">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Interest Level</label>
+                        <select id="doctorInterest">
+                            <option value="">Select Level</option>
+                            <option value="Very Interested">Very Interested</option>
+                            <option value="Somewhat Interested">Somewhat Interested</option>
+                            <option value="Neutral">Neutral</option>
+                            <option value="Not Interested">Not Interested</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Feedback -->
+                <div class="form-section">
+                    <h3>Visit Notes</h3>
+                    <div class="form-group">
+                        <label>Feedback/Comments*</label>
+                        <textarea id="clientFeedback" required></textarea>
+                    </div>
+                </div>
+
+                <button type="submit">Submit Report</button>
+            </form>
+        </div>
+
+        <!-- Records View -->
+        <div id="recordsView" class="record-view" style="display: none;">
+            <div class="controls">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search records...">
+                <select id="sortBy" class="search-input">
+                    <option value="date">Sort by Date</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="city">Sort by City</option>
+                </select>
+            </div>
+            <div id="recordsGrid" class="records-grid"></div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } 
+        from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCpcUWB7q_Dr6zONnrrHZ4Oek6CKqynwxM",
+            authDomain: "field-agent-85e4d.firebaseapp.com",
+            projectId: "field-agent-85e4d",
+            storageBucket: "field-agent-85e4d.appspot.com",
+            messagingSenderId: "943481749888",
+            appId: "1:943481749888:web:2d6d1d2a2a449cc6450165"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global State
+        let currentView = 'form';
+        let reports = [];
+
+        // Form Submission
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const report = {
+                // Required Fields
+                timestamp: new Date(),
+                agentName: document.getElementById('agentName').value,
+                cityName: document.getElementById('cityName').value,
+                patientName: document.getElementById('patientName').value,
+                disease: document.getElementById('disease').value,
+                locationArea: document.getElementById('locationArea').value,
+                patientAddress: document.getElementById('patientAddress').value,
+                clientFeedback: document.getElementById('clientFeedback').value,
+                
+                // Optional Doctor Fields
+                ...(document.getElementById('doctorName').value && {
+                    doctorName: document.getElementById('doctorName').value,
+                    hospitalName: document.getElementById('hospitalName').value,
+                    doctorPhone: document.getElementById('doctorPhone').value,
+                    doctorInterest: document.getElementById('doctorInterest').value
+                })
+            };
+
+            try {
+                await addDoc(collection(db, "reports"), report);
+                showToast("Report submitted successfully!");
+                e.target.reset();
+            } catch (error) {
+                console.error("Error submitting report:", error);
+                showToast("Error submitting report", "error");
+            }
+        });
+
+        // View Switching
+        window.switchView = function(view) {
+            currentView = view;
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const formView = document.getElementById('formView');
+            const recordsView = document.getElementById('recordsView');
+
+            if (view === 'form') {
+                formView.style.display = 'block';
+                recordsView.style.display = 'none';
+            } else {
+                formView.style.display = 'none';
+                recordsView.style.display = 'block';
+                renderRecords(view);
+            }
+        };
+
+        // Record Rendering
+        function renderRecords(view) {
+            const grid = document.getElementById('recordsGrid');
+            grid.innerHTML = '';
+
+            let filteredReports = reports;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            // Filter based on view and search
+            if (view === 'doctors') {
+                filteredReports = reports.filter(r => r.doctorName);
+            }
+
+            if (searchTerm) {
+                filteredReports = filteredReports.filter(report => {
+                    if (view === 'doctors') {
+                        return report.doctorName?.toLowerCase().includes(searchTerm) ||
+                               report.hospitalName?.toLowerCase().includes(searchTerm);
+                    } else {
+                        return report.patientName.toLowerCase().includes(searchTerm) ||
+                               report.disease.toLowerCase().includes(searchTerm) ||
+                               report.locationArea.toLowerCase().includes(searchTerm);
+                    }
+                });
+            }
+
+            // Sort records
+            const sortBy = document.getElementById('sortBy').value;
+            filteredReports.sort((a, b) => {
+                switch(sortBy) {
+                    case 'date':
+                        return b.timestamp - a.timestamp;
+                    case 'name':
+                        return view === 'doctors' 
+                            ? (a.doctorName || '').localeCompare(b.doctorName || '')
+                            : a.patientName.localeCompare(b.patientName);
+                    case 'city':
+                        return a.cityName.localeCompare(b.cityName);
+                    default:
+                        return 0;
+                }
+            });
+
+            // Render records
+            filteredReports.forEach(report => {
+                const card = document.createElement('div');
+                card.className = 'record-card';
+                
+                if (view === 'doctors' && report.doctorName) {
+                    card.innerHTML = `
+                        <h3>${report.doctcard.innerHTML = `
+                        <h3>${report.doctorName}</h3>
+                        <p><strong>Hospital:</strong> ${report.hospitalName || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${report.doctorPhone || 'N/A'}</p>
+                        <p><strong>City:</strong> ${report.cityName}</p>
+                        <p><strong>Interest Level:</strong> ${report.doctorInterest || 'N/A'}</p>
+                        <p><strong>Last Visit:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <h3>${report.patientName}</h3>
+                        <p><strong>Condition:</strong> ${report.disease}</p>
+                        <p><strong>Area:</strong> ${report.locationArea}</p>
+                        <p><strong>Address:</strong> ${report.patientAddress}</p>
+                        <p><strong>Doctor:</strong> ${report.doctorName || 'Not Assigned'}</p>
+                        <p><strong>Visit Date:</strong> ${report.timestamp.toDate().toLocaleDateString()}</p>
+                    `;
+                }
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // Real-time Updates
+        const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
+        onSnapshot(q, (snapshot) => {
+            reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (currentView !== 'form') {
+                renderRecords(currentView);
+            }
+        });
+
+        // Search Handler
+        document.getElementById('searchInput').addEventListener('input', () => {
+            if (currentView !== 'form') {
+                renderRecords(currentView);
+            }
+        });
+
+        // Sort Handler
+        document.getElementById('sortBy').addEventListener('change', () => {
+            if (currentView !== 'form') {
+                renderRecords(currentView);
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            switchView('form');
+        });
+    </script>
+</body>
+</html>
